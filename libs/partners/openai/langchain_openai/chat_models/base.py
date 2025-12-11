@@ -78,6 +78,9 @@ from langchain_core.messages.block_translators.openai import (
     convert_to_openai_data_block,
 )
 from langchain_core.messages.tool import tool_call_chunk
+from langchain_core.messages.content import (
+    create_reasoning_block,
+)
 from langchain_core.output_parsers import JsonOutputParser, PydanticOutputParser
 from langchain_core.output_parsers.openai_tools import (
     JsonOutputKeyToolsParser,
@@ -363,10 +366,18 @@ def _convert_delta_to_message_chunk(
     _dict: Mapping[str, Any], default_class: type[BaseMessageChunk]
 ) -> BaseMessageChunk:
     """Convert to a LangChain message chunk."""
+    # 外部传入choice["delta"]-》_dict
+    # 外部传入AIMessageChunk-》default_class
     id_ = _dict.get("id")
     role = cast(str, _dict.get("role"))
     content = cast(str, _dict.get("content") or "")
     additional_kwargs: dict = {}
+
+    # qwen模型通过openai api返回的思考内容不是标准的openai预期的格式，必须特殊处理
+    reasoning_content = cast(str, _dict.get("reasoning_content") or "")
+    if reasoning_content:
+        additional_kwargs["reasoning_block"] = create_reasoning_block(reasoning_content)
+
     if _dict.get("function_call"):
         function_call = dict(_dict["function_call"])
         if "name" in function_call and function_call["name"] is None:

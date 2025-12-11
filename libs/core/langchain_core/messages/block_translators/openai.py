@@ -979,6 +979,12 @@ def _convert_to_v1_from_responses(message: AIMessage) -> list[types.ContentBlock
 
     return list(_iter_blocks())
 
+def _convert_to_qwen_reasoning_block(message: AIMessageChunk) -> list[types.ContentBlock]:
+    """处理qwen模型返回的思考块"""
+    content_blocks: list[types.ContentBlock] = []
+    if message.additional_kwargs and "reasoning_block" in message.additional_kwargs:
+        content_blocks.append(message.additional_kwargs["reasoning_block"])
+    return content_blocks
 
 def translate_content(message: AIMessage) -> list[types.ContentBlock]:
     """Derive standard content blocks from a message with OpenAI content."""
@@ -990,6 +996,12 @@ def translate_content(message: AIMessage) -> list[types.ContentBlock]:
 
 def translate_content_chunk(message: AIMessageChunk) -> list[types.ContentBlock]:
     """Derive standard content blocks from a message chunk with OpenAI content."""
+
+    # 处理qwen返回的思考块
+    if message.additional_kwargs and "reasoning_block" in message.additional_kwargs:
+        # print("translate_content_chunk qwen reasoning_block")
+        return _convert_to_qwen_reasoning_block(message)
+
     if isinstance(message.content, str):
         return _convert_to_v1_from_chat_completions_chunk(message)
     message = _convert_from_v03_ai_message(message)  # type: ignore[assignment]
